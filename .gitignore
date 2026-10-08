@@ -1,0 +1,6 @@
+/dist-newstyle/
+/.cabal-local/
+/cabal.project.local
+
+
+__pycache__/

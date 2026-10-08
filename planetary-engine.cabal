@@ -1,0 +1,167 @@
+cabal-version: 3.0
+name: planetary-engine
+version: 0.1.0.0
+synopsis: Numerical kernels for planetary circulation
+description: Array computations using Accelerate with CPU interpreter and NVIDIA PTX execution.
+category: Simulation
+build-type: Simple
+tested-with: GHC ==9.14.1
+extra-source-files: README.md
+
+flag native
+  description: Run the scenarios and checks on the multicore LLVM backend instead of the interpreter
+  default: True
+  manual: True
+
+flag ptx
+  description: Build the NVIDIA CUDA smoke executable
+  default: False
+  manual: True
+
+common settings
+  default-language: GHC2024
+  default-extensions:
+    DuplicateRecordFields
+    MultiWayIf
+    NoFieldSelectors
+    OrPatterns
+    OverloadedRecordDot
+    PatternSynonyms
+    RecordWildCards
+    Strict
+    ViewPatterns
+  ghc-options: -Wall
+  build-depends:
+    base >=4.18 && <4.23,
+    accelerate ==1.4.0.0
+
+common backend
+  if flag(native)
+    hs-source-dirs: backends/native
+    build-depends: accelerate-llvm-native ==1.4.0.0
+  else
+    hs-source-dirs: backends/interpreter
+
+library
+  import: settings
+  hs-source-dirs: src
+  exposed-modules:
+    Planetary.Geometry
+    Planetary.Geometry.Flat
+    Planetary.Physics
+    Planetary.Physics.Advection
+    Planetary.Physics.Barotropic
+    Planetary.Physics.Convection
+    Planetary.Physics.Diffusion
+    Planetary.Physics.Dynamics
+    Planetary.Physics.Pressure
+    Planetary.Physics.Surface
+    Planetary.Physics.Vertical
+    Planetary.State
+    Planetary.TimeStep
+    Planetary.World
+
+executable engine-smoke
+  import: settings, backend
+  hs-source-dirs: app/checks, checks, scenarios
+  main-is: Main.hs
+  other-modules:
+    Checks
+    Checks.Advection
+    Checks.Convection
+    Checks.Dynamics
+    Checks.Layers
+    Checks.Snapshots
+    Checks.Split
+    Checks.Support
+    Checks.Surface
+    Checks.TimeStepping
+    Checks.Vertical
+    Snapshot
+    Backend
+  build-depends:
+    planetary-engine,
+    JuicyPixels,
+    bytestring,
+    directory
+
+executable engine-smoke-ptx
+  import: settings
+  hs-source-dirs: app/ptx, checks
+  main-is: Main.hs
+  other-modules:
+    Checks
+    Checks.Advection
+    Checks.Convection
+    Checks.Dynamics
+    Checks.Layers
+    Checks.Split
+    Checks.Support
+    Checks.Surface
+    Checks.TimeStepping
+    Checks.Vertical
+  build-depends: planetary-engine
+  if flag(ptx)
+    build-depends: accelerate-llvm-ptx ==1.4.0.0
+  else
+    buildable: False
+
+test-suite engine-tests
+  import: settings, backend
+  type: exitcode-stdio-1.0
+  hs-source-dirs: app/checks, checks, scenarios
+  main-is: Main.hs
+  other-modules:
+    Checks
+    Checks.Advection
+    Checks.Convection
+    Checks.Dynamics
+    Checks.Layers
+    Checks.Snapshots
+    Checks.Split
+    Checks.Support
+    Checks.Surface
+    Checks.TimeStepping
+    Checks.Vertical
+    Snapshot
+    Backend
+  build-depends:
+    planetary-engine,
+    JuicyPixels,
+    bytestring,
+    directory
+
+executable warm-patch
+  import: settings, backend
+  hs-source-dirs: scenarios
+  main-is: WarmPatch.hs
+  other-modules:
+    Snapshot
+    Backend
+  build-depends:
+    planetary-engine,
+    JuicyPixels,
+    bytestring,
+    directory
+
+executable flat-basin
+  import: settings, backend
+  hs-source-dirs: scenarios
+  main-is: FlatBasin.hs
+  other-modules:
+    Snapshot
+    Backend
+  build-depends:
+    planetary-engine,
+    JuicyPixels,
+    bytestring,
+    directory
+
+executable bench
+  import: settings, backend
+  hs-source-dirs: scenarios
+  main-is: Bench.hs
+  other-modules: Backend
+  ghc-options: -rtsopts
+  build-depends:
+    planetary-engine

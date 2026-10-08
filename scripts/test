@@ -1,0 +1,24 @@
+#!/bin/sh
+set -u
+cd "$(dirname "$0")/.." || exit 1
+cabal build engine-tests >/dev/null || exit 1
+binary=$(cabal list-bin engine-tests)
+if [ "$#" -gt 0 ]; then groups="$*"; else groups=$("$binary" --groups); fi
+output=$(mktemp -d)
+cache="$PWD/dist-newstyle/test-cache"
+for group in $groups; do
+  (
+    started=$(date +%s)
+    if XDG_CACHE_HOME="$cache/$group" "$binary" "$group" >"$output/$group.log" 2>&1; then echo ok >"$output/$group.status"; else echo failed >"$output/$group.status"; fi
+    echo $(($(date +%s) - started)) >"$output/$group.seconds"
+  ) &
+done
+wait
+status=0
+for group in $groups; do
+  result=$(cat "$output/$group.status")
+  printf '%-14s %-7s %4ss\n' "$group" "$result" "$(cat "$output/$group.seconds")"
+  if [ "$result" != ok ]; then status=1; grep -v '^PASS' "$output/$group.log" | head -20; fi
+done
+rm -rf "$output"
+exit $status

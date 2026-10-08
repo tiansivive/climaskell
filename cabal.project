@@ -1,0 +1,5 @@
+packages: .
+index-state: 2026-10-05T00:00:00Z
+
+package zlib
+  flags: +bundled-c-zlib
